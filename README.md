@@ -1,11 +1,11 @@
 
 # Análisis del Dataset Red wine quality
 
-Este trabajo correspone a la segunda práctica de la asignatura de Tipología y ciclo de vida de los datos del Máster de ciencia de datos de la Universidad Oberta de Catalunya
+Este trabajo correspone a la segunda práctica de la asignatura de Tipología y ciclo de vida de los datos del Máster de ciencia de datos de la Universidad Oberta de Catalunya.
 
 # Integrantes
 
-El trabajo se ha realizado íntegramente por el único componentes KYrylo Morozov
+El trabajo se ha realizado íntegramente por el único componentes Kyrylo Morozov.
 
 # Licencia y Cita a los propietarios
 
