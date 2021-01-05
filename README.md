@@ -14,4 +14,4 @@ Almeida, T. Matos and J. Reis. Así pues, se debe reconocer la propiedad intelec
 al trabajo:
 P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from
 physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009. Enlace Dataset
-<p><a href="https://archive.ics.uci.edu/ml/datasets/wine+quality" target="_blank">Este enlace</a>.</p>
+<p><a href="https://archive.ics.uci.edu/ml/datasets/wine+quality" target="_blank">DATASET</a>.</p>
