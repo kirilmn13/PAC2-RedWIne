@@ -5,7 +5,16 @@ Este trabajo correspone a la segunda práctica de la asignatura de Tipología y 
 
 # Integrantes
 
-El trabajo se ha realizado íntegramente por el único componentes Kyrylo Morozov.
+El trabajo se ha realizado íntegramente por el único componentes Kyrylo Morozov.ç
+
+# Jerarquía Archivos
+
+*PRA2-Tipología-Kyrylo Morozov.Rmd - Código R en formato Rmarkdown
+*PRA2-Tipología-Kyrylo-Morozov.html - Informe formato HTML
+*PRA2-Tipología-Kyrylo-Morozov.pdf - Informe formato PDF
+*winequality-red_clean.csv - Datos Limpios sin tratamiento de outliers
+*winequality-red_clean_imputedoutliers.csv - Datos con tratamiento de outliers
+*winequality-red_raw.csv  - Dataset original
 
 # Licencia y Cita a los propietarios
 
