@@ -1,0 +1,418 @@
+---
+title: "Práctica 2: Tipología y ciclo de vida de los datos"
+author: "Kyrylo Morozov"
+date: '`r format(Sys.Date(),"%e de %B, %Y")`'
+output:
+  pdf_document:
+    toc: yes
+    number_sections: yes
+    includes:
+      pandoc_args: --listings
+      in_header: report.sty
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: 2
+    toc_float: true 
+    includes:
+      in_header: header.html
+bibliography: scholar.bib 
+lang: es    
+nocite: |   
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(error = TRUE)
+```
+```{r load_libraries, include=FALSE}
+library(knitr)
+library(lubridate)
+library(VIM)
+library(stringr)
+library(psych)
+library(stringr)
+library(ggplot2)
+library(ggcorrplot)
+library(dplyr)
+library(reshape2)
+library(ggiraphExtra)
+library(epitools)
+library(caret)
+library(grid)
+library(gridExtra)
+library(corrplot)
+library(car)
+library(nortest)
+library(MASS)
+library(memisc)
+library(class)
+```
+
+# Introducción {-}
+
+En esta práctica nos centrarémos en el análisis íntegro de un dataset poniendo en práctica todas las técnicas aprendidas en el transcurso de la asignatura.
+
+## Descripción de Variables
+
+Nuestra base de datos, dispone de una colección de propiedades físico-químicas de una gran variedad de vinos tintos con origen en el norte de Portugal. Por motivos de privacidad y protección de marcas no disponemos de datos sobre el tipo de uva, marca o brand del propio vino ni tampoco del precio. Así las variables que se nos proporcionan son las siguientes:
+
+* fixed acidity:  (g / dm^3) Concentración de ácidos no volatiles.
+* volatile acidity: (g / dm^3) Ácido acético, responsable del sabor agrio, avinagrado.
+* citric acid: (g / dm^3) Ácido cítrico, encontrado en cantidades pequeñas.
+* residual sugar: (g / dm^3) Cantidad de azucar remanente despeés de la fermentación.
+* chlorides: (g / dm^3) generalmente sal.
+* free sulfur dioxide:  (mg / dm^3) Dióxido de azufre, previene crecimiento de microbiomas y la oxidación del vino.
+* total sulfur dioxide: (mg / dm^3) Total de dióxido de azufre contenido.
+* density: (g / cm^3) Densidad del vino.
+* pH: Escala pH, la mayoría de los vinos están entre 3-4.
+* sulphates: (g / dm^3) Aditivo que contribuye a generar dioxido de azufre, gas de efecto invernadero.
+* alcohol:(%Volumen). Concentración de alcohol en el vino. 
+* quality: Calidad del vino puntuada de 0 a 10.
+
+**En total disponemos de 1599 observaciones**
+
+## Objetivos 
+Por el tipo de datos y ámbito del dataset, éste es adecuado para realizar técnicas de regresión o clasificación sobre él. 
+Como objetivo principal podemos establecer la búsqueda de las propiedades físico-químicas que hacen que el vino tenga mayor o menor calidad. Así podemos agrupar nuestras variables de entrada (11) y la variable de salida, siendo ésta "quality".
+Además sería interesante disponer de herramientas, que mediante la entrada de las propiedades de un vino,  puedan clasificarlo en bueno o malo.
+
+Por oto lado podemos hablar de objetivos y referidos a las competecias correspondientes a los conocimientos pertenecientes al **Máster de Ciencia de datos**.
+
+1. Analizar y establecer el problema que compete al dataset.
+2. Seleccionar las variables adecuadas para la resolución del problema con su previa puesta a punto con procedimientos de limpieza, normalización y validación
+3. Representar los resultados de forma adecuada y visualmente atractiva, además de hacer que ésta visualización sea intuitiva para interpretar los resultados de una forma correcta.
+4. Discernir cuál de todas las técnicas disponibles para el anális de datos, es la mejor opción para cada caso en concreto.
+5. Abordar el problema desde una perspectiva crítica y analítica, esto es, con visión innovadora y posiblemente disruptiva para con las técnicas ya existentes.
+
+## Licencia y reconomiento
+
+El dataset con el que vamos a trabajar, es parte de un trabajo Realizado por P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Así pues, se debe reconocer la propiedad intelectual con la pertinente referencia al trabajo:
+
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.
+[Enlace Dataset](https://archive.ics.uci.edu/ml/datasets/wine+quality)
+
+******
+
+# Limpieza del dataset
+
+## Carga del fichero y primer vistazo
+
+
+Cargamos el fichero con el siguiente código:  
+
+```{r lectura, echo=TRUE, warning=FALSE}
+
+archivo <- "winequality-red_raw.csv"
+df <- read.csv(archivo)
+summary(df)
+
+```
+Forma de los datos y el nombre de las columnas.
+
+```{r , echo=TRUE, warning=FALSE}
+dim(df)
+colnames(df)
+
+```
+Echamos un vistazo al resumen de la estructura de nuestra base de datos y todas las variables que intervienen en ella.
+```{r , echo=TRUE, warning=FALSE}
+str(df)
+```
+
+## Valores Nulos NA's
+
+```{r , echo=TRUE, warning=FALSE}
+which(is.na(df$fixed.acidity))
+which(is.na(df$volatile.acidity))
+which(is.na(df$citric.acid))
+which(is.na(df$residual.sugar))
+which(is.na(df$chlorides))
+which(is.na(df$free.sulfur.dioxide))
+which(is.na(df$total.sulfur.dioxide))
+which(is.na(df$density))
+which(is.na(df$pH))
+which(is.na(df$sulphates))
+which(is.na(df$alcohol))
+which(is.na(df$quality))
+```
+Observamos como no existen valores nulos ni perdidos dentro de nuestro dataset por lo tanto no debemos preocuparnos por ellos.
+
+Creamos una nueva variable, por si puede sernos útiles en las predicciones, que divide los vinos en buenos, regulares y malos.
+```{r }
+df$rating <- ifelse(df$quality < 5, 'bad', ifelse(
+  df$quality < 7, 'average', 'good'))
+
+df$rating <- ordered(df$rating,
+                       levels = c('bad', 'average', 'good'))
+
+```
+
+## Outliers 
+
+Para poder analizar mejor los outliers, vamos a hacer un boxplor para cada una de las variables disponibles en el dataset.
+
+```{r , echo=TRUE, warning=FALSE}
+boxplots1 = par(mfrow = c(1,3))
+for ( i in 1:11) {
+  boxplot(df[[i]], col="skyblue",outcol='red',pch=22, method='jitter')
+  mtext(names(df)[i], side = 1, line = 2)
+}
+par(boxplots1)
+```
+Podemos comprobar los valores numéricos de dichos outliers con el siguiente código.
+```{r , echo=TRUE, warning=FALSE}
+boxplot.stats(df$fixed.acidity)$out
+boxplot.stats(df$volatile.acidity)$out
+boxplot.stats(df$citric.acid)$out
+boxplot.stats(df$residual.sugar)$out
+boxplot.stats(df$chlorides)$out
+boxplot.stats(df$free.sulfur.dioxide)$out
+boxplot.stats(df$total.sulfur.dioxide)$out
+boxplot.stats(df$density)$out
+boxplot.stats(df$pH)$out
+boxplot.stats(df$sulphates)$out
+boxplot.stats(df$alcohol)$out
+boxplot.stats(df$quality)$out
+
+```
+
+Podemos ver perfectamente como en todas las variables existen outliers. Para imputarlos, vamos a usar una estrategía bastante expandida, como la de imputación de outliers "leves", esto es, aquellos que se encuentran 1.5 pasos por encima y por debajo de los cuartiles Q1 y Q3.
+```{r , echo=TRUE, warning=FALSE}
+outnorm <- function(x){
+   qntile <- quantile(x, probs=c(.25, .75))
+   caps <- quantile(x, probs=c(.05, .95))
+   H <- 1.5 * IQR(x, na.rm = T)
+   x[x < (qntile[1] - H)] <- caps[1]
+   x[x > (qntile[2] + H)] <- caps[2]
+   return(x)
+}
+
+dfi <- df
+
+for (i in 1:11){
+  dfi[[i]]=outnorm(dfi[[i]])
+}
+
+```
+```{r , echo=TRUE, warning=FALSE}
+boxplots2 = par(mfrow = c(1,3))
+for ( i in 1:11) {
+  boxplot(dfi[[i]], col="skyblue",outcol='red',pch=22, method='jitter')
+  mtext(names(df)[i], side = 1, line = 2)
+}
+par(boxplots2)
+```
+
+Podemos comprobar definitivamente que nos hemos deshecho de los outliers. Aunque esto es una técnica que consigue que nuestros datos sean más manejables de cara a hacer predicciones, puede ocurrir, que este tipo de tratamientos de datos induzcan un error en las predicciones. Puesto que estamos modificando la realidad que representan los datos. Por lo tanto, la decisión final ha sido la de proseguir con los outliers originales, para no perder exactitud en los datos. Aunque también se guarda tanto la versión imputada como sin imputar para poder hacer en un futuro  comparativa entre ámbos enfoques.
+```{r , echo=TRUE, warning=FALSE}
+write.csv(dfi, file = "winequality-red_clean_imputedoutliers.csv")
+write.csv(df, file = "winequality-red_clean.csv")
+```
+
+
+# Análisis de datos
+
+## Test Normalidad
+
+
+Para comprobar la normalidad de los datos podemos usar el test de Shapiro-Wilk. Si pvalue<0.05 la distribución no es normal, en caso contrario, si lo es.
+```{r , echo=TRUE, warning=FALSE}
+shapiro.test(df$pH)
+shapiro.test(df$fixed.acidity)
+shapiro.test(df$volatile.acidity)
+shapiro.test(df$citric.acid)
+shapiro.test(df$residual.sugar)
+shapiro.test(df$chlorides)$out
+shapiro.test(df$free.sulfur.dioxide)
+shapiro.test(df$total.sulfur.dioxide)
+shapiro.test(df$density)
+shapiro.test(df$sulphates)
+shapiro.test(df$alcohol)
+shapiro.test(df$quality)
+
+```
+Se puede afirmar con total seguridad que ninguna de las variables sigue una distribución normal, estricatamente. Esto no implica en nigún momento que los datos no sean modelables, ni tampoco hay un imperativo en normalizar variables para poder realizar predicciones satisfactoriamente. De hecho para esta práctica se ha tomado la decisión de no normalizar las variables para no perder una visión numérica real de los factores físico-químicos de cara a una posible lectura del trabajo por parte de profesionales del sector.
+
+```{r , echo=TRUE, warning=FALSE}
+p1 <- qplot(fixed.acidity, data = df,binwidth=1)+ ggtitle("fixed.acidity")
+p2 <- qplot(volatile.acidity, data = df,binwidth=0.1) + ggtitle("volatile.acidity")
+p3 <- qplot(citric.acid, data = df,binwidth=0.01) + ggtitle("citric.acid")
+p4 <- qplot(residual.sugar, data = df,binwidth=1) + ggtitle("residual.sugar")
+p5 <- qplot(chlorides, data = df,binwidth=0.01) + ggtitle("chlorides")
+p6 <- qplot(free.sulfur.dioxide, data = df,binwidth=1) + ggtitle("free.sulfur.dioxide")
+p7 <- qplot(total.sulfur.dioxide, data = df,binwidth=1) + ggtitle("total.sulfur.dioxide")
+p8 <- qplot(pH, data = df,binwidth=0.01)+ggtitle("Ph")
+p9 <- qplot(density, data = df,binwidth=0.001)+ggtitle("density")
+p10 <- qplot(alcohol, data = df,binwidth=0.1) + ggtitle("alcohol")
+p11<- qplot(sulphates, data = df,binwidth=0.01) + ggtitle("sulphates")
+p12 <- qplot(quality, data = df,binwidth=1) + ggtitle("quality")
+grid.arrange(p1, p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12, nrow = 3,
+top = "VIsualización Distribuciones")
+```
+Este último test de Shapiro es bastante sensible a pequeñas desviaciones de la normalidad, por lo tanto, aún sin ser las distribuiones normales y sin normalizar las variables, podemos asumir en algunas ocasiones analizando las distribuciones con la gráfica, que en agunos casos las variables se comportan de forma normal.
+
+
+## Correlaciones entre variables 
+
+```{r}
+dfcor <- cor(select_if(df, is.numeric))
+ggcorrplot(dfcor,hc.order = TRUE,
+  type = "lower",
+  outline.color = "white", 
+  ggtheme = ggplot2::theme_gray,colors = c("#6D9EC1", "white", "#E46726"))
+```
+Podemos ver, en las correlaciones, que las variables que más influyen en la calidad, son el alcohol, ácidos volatiles, sulfatos, ácido cítrico, total dioxido azufre, densidad, sal,ácidos no volatiles, ph,SO2, azucar, en orden descendiente. 
+Una vez encontradas las correlaciones más altas podemos comprobar si realmente las variables que menos correlación presentan, tienen poca significancia para la predicción de la calidad de vino. Lo harémos con T-test
+
+
+## Test estadístico
+
+Vistas las correlaciones podemos aplicar un test estadístico para comprobar si existe por ejemplo una correlación alta y podemos decir que a más alcohol, mejor es la calidad del vino.
+
+Con esto Hipótesis nula y alternativa mos queda de la siguiente forma.
+
+$H_0 :  \mu _1 =  \mu _2$
+
+$H_1 :  \mu _1 <  \mu _2$
+
+
+```{r}
+t.test(df$alcohol,df$quality)
+```
+
+Como el pvalue<alpha(nivel de significancia)  podemos rechazar la hipótesis nula y por consiguiente aformar que a mayor cantidad alcohol mejor será la calidad del vino.
+
+
+Podemos realizar la misma prueba con otras dos variables con mayor correlación.
+```{r}
+t.test(df$volatile.acidity,df$quality)
+```
+```{r}
+t.test(df$sulphates,df$quality)
+```
+Llegando exactamente a las mismas conclusiones.
+
+## Análisis Gráficos
+
+Otro método de análisis de los datos es la visualización de las relaciones que tienen las variables entre si.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data = df,
+       aes(y = density, x = alcohol,
+           color = factor(df$quality, ordered = T))) +
+  geom_point(alpha = 0.8, size = 2) +
+  
+  geom_smooth(method = "lm", se = FALSE,size=1)  +
+  scale_color_brewer(type='seq',
+                   guide=guide_legend(title='Quality'))
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data=df, aes(x=volatile.acidity, y=alcohol, color=rating))+
+  geom_point(alpha=0.5, size=2)+
+  geom_jitter(alpha=0.3)+
+  theme(panel.background = element_rect(fill='grey75'))+
+  geom_smooth(method='lm', se=FALSE)+
+  xlab('pH ') + ylab(' Sulphates')
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(data=df, aes(x=pH, y=sulphates, color=rating))+
+  geom_point(alpha=0.5, size=2)+
+  geom_jitter(alpha=0.3)+
+  theme(panel.background = element_rect(fill='grey75'))+
+  geom_smooth(method='lm', se=FALSE)+
+  xlab('pH ') + ylab(' Sulphates')
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+high_quality <- subset(df, quality == 7 | quality == 8)
+low_quality <- subset(df, quality == 3 | quality == 4)
+p1 <- qplot(x = fixed.acidity, data = high_quality)
+p2 <- qplot(x = fixed.acidity, data = low_quality)
+p3 <- qplot(x = volatile.acidity, data = high_quality)
+p4 <- qplot(x = volatile.acidity, data = low_quality)
+p5 <- qplot(x = citric.acid, data = high_quality)
+p6 <- qplot(x = citric.acid, data = low_quality)
+p7 <- qplot(x = pH, data = high_quality)
+p8 <- qplot(x = pH, data = low_quality)
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, ncol = 2)
+```
+Esta última gráfica permite ver las distribuciones de nuestras variables divididas en dos grupos para vinos buenos y vinos malos.
+
+
+# Modelos 
+
+
+## Regresión lineal
+
+El primer modelo propuesto es una regresión lineal. Empezaremos con una única variables predictora e irémos introduciendo de una en una para los siguientes modelos en el orden de la correlación creciente.
+
+```{r}
+options(width = 60)
+set.seed(1221)
+training_data <- sample_frac(df, .6)
+test_data <- df[ !df$X %in% training_data$X, ]
+m1 <- lm(as.numeric(quality) ~ alcohol, data = training_data)
+m2 <- update(m1, ~ . + volatile.acidity)
+m3 <- update(m2, ~ . + sulphates)
+m4 <- update(m3, ~ . + citric.acid)
+m5 <- update(m4, ~ . + total.sulfur.dioxide)
+m6 <- update(m5, ~ . + density)
+m7 <- update(m6, ~ . + chlorides)
+m8 <- update(m7, ~ . + fixed.acidity)
+m9 <- update(m8, ~ . + pH)
+m10 <- update(m9, ~ . + free.sulfur.dioxide)
+m11 <- update(m10, ~ . + residual.sugar)
+mtable(m1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11)
+```
+Con esta información llegamos a la conclusión de que el mejor modelo es m11, m8,m9. Aunque tambíen se puede observar que añadir más variables predictoras a costa del rendimiento no siempre mejora el nivel de acierto.
+
+## Regresión logística
+
+Hemos preparado una variable nueva llamada rating, con anterioridad para poder hacer predicciones sobre variables categóricas y así poder clasificar el vino en bueno, regular y malo.
+Además podemos aádir una mejora a nuestro modelo, con la técnica de cross-validatión con el fin de mejorar el resultado.
+
+
+
+
+
+
+
+```{r}
+set.seed(123) 
+train.control <- trainControl(method = "cv", number = 10)
+model <- train(quality ~ alcohol + volatile.acidity +  sulphates + total.sulfur.dioxide,
+                data = df, method = "glm", trControl = train.control)
+summary(model)
+print(model)
+```
+Se puede ver que una regresión logística  no mejora demasiado el nivel de predicción
+
+
+## KNN
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(3033)
+intrain <- createDataPartition(y = df$rating, p= 0.7, list = FALSE)
+training <- df[intrain,]
+testing <- df[-intrain,]
+
+
+knn.mod=train(rating ~.,data=training,method='knn', preProcess=c("center","scale"))
+knn.mod
+plot(knn.mod)
+confusionMatrix(knn.mod)
+test_pred <- predict(knn.mod, newdata = testing)
+
+confusionMatrix(test_pred, testing$rating )
+
+```
+Podemos observar por la regla del codo automatizada en el algoritmo KNN como la mejor opción es k=7, es la que arroja los mejores resultados.
+
+# Conclusiones
+
+En Definitiva, después de haber probado varios modelos de predicción y clasificación podemos afirmar que el nivel de bondad alcanzado en todos los modelos gira en torno a R2=0.34-0.35. Unas posibles mejoras y un trabajo futuro podría centrarse en hacer los modelos con las variables normalizadas. Además podemos intentar hacer modelos polinómicos o incluso logarítmicos. Esto compactaría de alguna forma la distribución y podría influir de una forma positiva en los resultados.
+
+Hemos podido corroborar y extraer información de las correlaciones que tienen las variables y ello podría ser útil para optimizar la fabricación del vino en la industría.
+
+Por último se puede afirmar que se han alcanzado los objetivos propuestos de modelado y clasificación de los datos.
